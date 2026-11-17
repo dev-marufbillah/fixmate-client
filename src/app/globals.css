@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply font-body text-base-content antialiased;
+    background-color: var(--fallback-b1, oklch(var(--b1)));
+  }
+  ::selection {
+    @apply bg-primary/20;
+  }
+}
+
+@layer components {
+  .container-px {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  .section-pad {
+    @apply py-16 md:py-20;
+  }
+  .page-h1 {
+    @apply text-3xl md:text-4xl lg:text-5xl font-heading font-extrabold tracking-tight;
+  }
+  .page-h2 {
+    @apply text-2xl md:text-3xl font-heading font-bold tracking-tight;
+  }
+  .page-h3 {
+    @apply text-lg md:text-xl font-heading font-bold;
+  }
+  .card-surface {
+    @apply rounded-2xl border border-base-300 bg-base-100 shadow-sm;
+  }
+  .btn-core {
+    @apply btn btn-primary rounded-xl h-11 px-6 font-semibold border-0;
+  }
+  .btn-core-ghost {
+    @apply btn btn-outline btn-primary rounded-xl h-11 px-6 font-semibold;
+  }
+  .input-core {
+    @apply input input-bordered w-full rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/25 transition;
+  }
+  .select-core {
+    @apply select select-bordered w-full rounded-xl focus:border-primary focus:ring-2 focus:ring-primary/25 transition;
+  }
+  .link-active {
+    @apply text-primary font-semibold;
+  }
+  /* Indigo badge for "accepted" (assignment color map) */
+  .badge-indigo {
+    @apply badge text-white;
+    background-color: #4f46e5;
+    border-color: transparent;
+  }
+  .skeleton-shimmer {
+    @apply animate-pulse rounded-xl bg-base-300/70;
+  }
+  .table-core {
+    @apply table table-zebra w-full;
+  }
+}
+
+@layer utilities {
+  .glass-navbar {
+    background: color-mix(in srgb, var(--fallback-b1, oklch(var(--b1))) 82%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
