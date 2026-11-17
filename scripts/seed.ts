@@ -41,9 +41,9 @@ async function getDb() {
 // ---------------------------------------------------------------------------
 async function signUp(auth: any, name: string, email: string, role: string) {
   const res = await auth.handler(
-    new Request("http://localhost/api/sign-up/email", {
+    new Request("http://localhost:3000/api/auth/sign-up/email", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", origin: "http://localhost:3000" },
       body: JSON.stringify({ name, email, password: PASSWORD, role }),
     })
   );
@@ -157,7 +157,7 @@ async function main() {
     bookings.createIndex({ customerEmail: 1, serviceId: 1, status: 1 }),
     bookings.createIndex({ technicianEmail: 1, status: 1 }),
     payments.createIndex({ stripeSessionId: 1 }, { unique: true }),
-    users.createIndex({ email: 1 }, { unique: true }),
+    // note: the users collection email index is created by BetterAuth itself
   ]);
 
   // ---- users ----

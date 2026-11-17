@@ -51,5 +51,7 @@ export const auth = betterAuth({
       },
     },
   },
-  trustedOrigins: [baseURL],
+  // Trust exactly where we run. The wildcard covers sandbox preview origins
+  // (https://<port>-<id>.e2b.app) — delete it when you move to your own domain.
+  trustedOrigins: [baseURL, "https://*.e2b.app"],
 });

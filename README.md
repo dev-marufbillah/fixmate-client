@@ -38,7 +38,7 @@ cp .env.example .env.local     # fill values (see table in SETUP-AND-DEPLOY.md)
 npm run seed                   # realistic connected data (MongoDB must be reachable)
 npm run dev                    # http://localhost:3000
 ```
-> The browser calls same-origin `/api/*` and Next.js proxies to the Express server (`next.config.ts`).
+> The browser calls same-origin `/backend/*` and Next.js proxies to the Express server (`next.config.ts`).
 > For production you can either keep the proxy or point `NEXT_PUBLIC_API_URL` directly at the
 > deployed API (then add your domain to the server's `CORS_ORIGINS`).
 
