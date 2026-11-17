@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Reveal } from "@/components/ui/Reveal";
 import { serverFetch } from "@/lib/server/api";
 import { PagedServices } from "@/lib/types";
-import { SearchX } from "lucide-react";
+import { SearchX, ServerOff, Wrench } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,7 @@ interface Search {
   page?: string;
 }
 
-async function getServices(sp: Search): Promise<PagedServices> {
+async function getServices(sp: Search): Promise<{ data: PagedServices; reachable: boolean }> {
   const empty: PagedServices = { services: [], total: 0, page: 1, pages: 1 };
   const params = new URLSearchParams();
   if (sp.search) params.set("search", sp.search);
@@ -32,9 +32,10 @@ async function getServices(sp: Search): Promise<PagedServices> {
   if (sp.serviceMode && sp.serviceMode !== "All") params.set("serviceMode", sp.serviceMode);
   if (sp.sort) params.set("sort", sp.sort);
   params.set("page", sp.page || "1");
-  params.set("limit", "9");
+  params.set("limit", "12");
   const data = await serverFetch<PagedServices>(`/services?${params.toString()}`);
-  return data || empty;
+  // data === null means the API itself could not be reached (not "no matches")
+  return { data: data || empty, reachable: data !== null };
 }
 
 export default async function ServicesPage({
@@ -43,7 +44,22 @@ export default async function ServicesPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
-  const { services, total, page, pages } = await getServices(sp);
+  const { data, reachable } = await getServices(sp);
+  const { services, total, page, pages } = data;
+
+  // Same URL to retry with the current filters when the API is down
+  const retryQs = new URLSearchParams();
+  if (sp.search) retryQs.set("search", sp.search);
+  if (sp.category && sp.category !== "All") retryQs.set("category", sp.category);
+  if (sp.serviceMode && sp.serviceMode !== "All") retryQs.set("serviceMode", sp.serviceMode);
+  if (sp.sort) retryQs.set("sort", sp.sort);
+  const retryHref = retryQs.toString() ? `/services?${retryQs.toString()}` : "/services";
+  const hasFilters = Boolean(
+    sp.search ||
+      (sp.category && sp.category !== "All") ||
+      (sp.serviceMode && sp.serviceMode !== "All") ||
+      sp.sort
+  );
 
   return (
     <div className="container-px py-10 md:py-14">
@@ -86,6 +102,22 @@ export default async function ServicesPage({
             }}
           />
         </>
+      ) : !reachable ? (
+        <EmptyState
+          icon={<ServerOff size={30} />}
+          title="We couldn't load services right now"
+          description="The FixMate API isn't responding. Running locally? Make sure terminal 1 (npm run db:local) and terminal 2 (npm run dev in Assignment-9/server) are running, seed once with npm run seed, then try again."
+          actionLabel="Try again"
+          actionHref={retryHref}
+        />
+      ) : total === 0 && !hasFilters ? (
+        <EmptyState
+          icon={<Wrench size={30} />}
+          title="No services in the database yet"
+          description="Running FixMate locally? Seed the demo data first — in Assignment-9/client run: npm run seed (with terminals 1 & 2 running), then reload this page. You should see 20+ service cards."
+          actionLabel="Reload page"
+          actionHref={retryHref}
+        />
       ) : (
         <EmptyState
           icon={<SearchX size={30} />}
