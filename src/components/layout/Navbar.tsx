@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Menu, X, LayoutDashboard, UserPen, LogOut, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
@@ -25,6 +25,15 @@ export function Navbar() {
   const router = useRouter();
   const { user, isPending } = useSessionUser();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  // subtle elevation once the user starts scrolling
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const close = () => setOpen(false);
 
@@ -51,7 +60,11 @@ export function Navbar() {
   const roleBadge = ROLE_META[user?.role || "customer"];
 
   return (
-    <header className="sticky top-0 z-50 border-b border-base-300 glass-navbar">
+    <header
+      className={`sticky top-0 z-50 border-b border-base-300 glass-navbar transition-shadow duration-300 ${
+        scrolled ? "shadow-lg shadow-black/5" : ""
+      }`}
+    >
       <nav className="container-px h-16 flex items-center justify-between gap-4">
         <Logo />
 

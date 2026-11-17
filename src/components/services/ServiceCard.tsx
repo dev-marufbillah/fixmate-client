@@ -5,7 +5,7 @@ import { money, cn } from "@/lib/utils";
 
 export function ServiceCard({ service }: { service: Service }) {
   return (
-    <div className="card-surface overflow-hidden h-full flex flex-col group">
+    <div className="card-surface overflow-hidden h-full flex flex-col group hover-lift">
       <div className="relative aspect-[16/10] overflow-hidden bg-base-200">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

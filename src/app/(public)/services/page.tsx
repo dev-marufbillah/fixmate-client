@@ -3,6 +3,7 @@ import { ServiceCard } from "@/components/services/ServiceCard";
 import { ServicesToolbar } from "@/components/services/ServicesToolbar";
 import { Pagination } from "@/components/services/Pagination";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Reveal } from "@/components/ui/Reveal";
 import { serverFetch } from "@/lib/server/api";
 import { PagedServices } from "@/lib/types";
 import { SearchX } from "lucide-react";
@@ -68,8 +69,10 @@ export default async function ServicesPage({
       {services.length > 0 ? (
         <>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((s) => (
-              <ServiceCard key={s._id} service={s} />
+            {services.map((s, i) => (
+              <Reveal key={s._id} delay={(i % 9) * 60} className="h-full">
+                <ServiceCard service={s} />
+              </Reveal>
             ))}
           </div>
           <Pagination

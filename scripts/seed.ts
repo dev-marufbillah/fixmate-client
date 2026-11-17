@@ -1,14 +1,19 @@
 /**
- * FixMate seed data — creates realistic connected data so the live site looks complete:
- * 1 admin, 2 technician accounts, 2 customers, 14 services (12+ approved across 7 categories),
- * bookings in every status (incl. one ready-to-pay and one already paid + payment record).
+ * FixMate seed data — makes the live site look complete & realistic:
+ *  • 5 accounts: 1 admin, 2 technicians, 2 customers (password: Fixmate123)
+ *  • 25 services across all 7 categories (22 approved + 3 pending for the approval queue)
+ *  • 18 bookings covering EVERY status (incl. 2 ready-to-pay "Pay Now" demos)
+ *  • 6 paid jobs with payment records + ratings & review text (stars on service cards)
+ *
+ * Re-running is safe: demo collections are rebuilt only when the target counts change,
+ * existing accounts are kept, and your own edits survive once counts match.
  *
  * Run from the client folder:  npm run seed
- * Requires .env.local (MONGODB_URI + BETTER_AUTH_SECRET) — same file Next.js uses.
+ * Requires .env.local (MONGODB_URI + BETTER_AUTH_SECRET) — the same file Next.js uses.
  */
 import fs from "fs";
 import path from "path";
-import { MongoClient, Collection } from "mongodb";
+import { MongoClient } from "mongodb";
 
 // ---------------------------------------------------------------------------
 // 0) Load .env.local manually (the script runs outside of Next.js)
@@ -27,9 +32,6 @@ const PASSWORD = "Fixmate123";
 const DAYS = 86_400_000;
 const now = Date.now();
 
-// ---------------------------------------------------------------------------
-// 1) Connect MongoDB (shared helper) + create indexes
-// ---------------------------------------------------------------------------
 async function getDb() {
   const client = new MongoClient(process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/fixmate");
   await client.connect();
@@ -37,7 +39,7 @@ async function getDb() {
 }
 
 // ---------------------------------------------------------------------------
-// 2) Users via BetterAuth's own handler (guarantees password hashing works)
+// 1) Users via BetterAuth's own handler (guarantees password hashing works)
 // ---------------------------------------------------------------------------
 async function signUp(auth: any, name: string, email: string, role: string) {
   const res = await auth.handler(
@@ -50,16 +52,13 @@ async function signUp(auth: any, name: string, email: string, role: string) {
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     const msg = JSON.stringify(body);
-    if (msg.toLowerCase().includes("already")) return; // fine — exists
-    // Duplicate users are fine on re-runs; anything else should be visible.
-    if (!msg.toLowerCase().includes("exist") && !msg.toLowerCase().includes("duplicate")) {
-      console.warn(`   ! sign-up issue for ${email}: ${msg.slice(0, 200)}`);
-    }
+    if (/already|exist|duplicate/i.test(msg)) return;
+    console.warn(`   ! sign-up issue for ${email}: ${msg.slice(0, 200)}`);
   }
 }
 
 // ---------------------------------------------------------------------------
-// 3) Seed content
+// 2) Seed content
 // ---------------------------------------------------------------------------
 const IMG = "/images/services";
 
@@ -98,46 +97,89 @@ interface SeedService {
 }
 
 const SERVICES: SeedService[] = [
-  { title: "iPhone Screen Replacement (OLED)", category: "Smartphone", description: "Genuine-quality OLED panel replacement for iPhone 12–15. Includes frame inspection, adhesive reseal and 30-day workmanship warranty. Dead pixels and touch issues fixed on the spot.", image: `${IMG}/smartphone.jpg`, basePrice: 79, estimatedDuration: "2-3 hours", serviceMode: "Shop Drop-off", serviceArea: "Dhanmondi, Dhaka", tech: 0, ageDays: 9 },
-  { title: "Samsung Display & Touch Repair", category: "Smartphone", description: "Cracked glass or unresponsive touch? We replace Samsung displays with calibrated parts and test every sensor before handover.", image: `${IMG}/smartphone.jpg`, basePrice: 65, estimatedDuration: "2-4 hours", serviceMode: "Home Visit", serviceArea: "Uttara, Dhaka", tech: 1, ageDays: 8 },
-  { title: "Laptop Full Service & Thermal Paste", category: "Laptop & PC", description: "Complete laptop servicing: internal dust cleaning, thermal paste renewal, fan check, hinge inspection and performance tuning. Fixes overheating and slowdowns.", image: `${IMG}/laptop.jpg`, basePrice: 45, estimatedDuration: "3-4 hours", serviceMode: "Shop Drop-off", serviceArea: "Dhanmondi, Dhaka", tech: 0, ageDays: 7 },
-  { title: "SSD Upgrade & OS Migration", category: "Laptop & PC", description: "Switch to blazing-fast SSD storage. We clone your OS and data, migrate everything safely and optimize boot times — usually under 3 hours.", image: `${IMG}/laptop.jpg`, basePrice: 55, estimatedDuration: "2-3 hours", serviceMode: "Shop Drop-off", serviceArea: "Mirpur, Dhaka", tech: 1, ageDays: 6 },
-  { title: "Split AC Deep Servicing", category: "AC", description: "Full indoor + outdoor deep clean with eco-friendly chemicals, coil fin straightening, drainage check and cooling performance test. Beat the Dhaka heat.", image: `${IMG}/ac.jpg`, basePrice: 40, estimatedDuration: "2-3 hours", serviceMode: "Home Visit", serviceArea: "Uttara, Dhaka", tech: 1, ageDays: 6 },
-  { title: "AC Gas Refill & Cooling Check", category: "AC", description: "Leaking or weak cooling? Pressure test, leak sealing and R-410A/R-32 gas refill with a 7-day cooling guarantee.", image: `${IMG}/ac.jpg`, basePrice: 35, estimatedDuration: "1-2 hours", serviceMode: "Home Visit", serviceArea: "Dhanmondi, Dhaka", tech: 0, ageDays: 5 },
-  { title: "Refrigerator Compressor Diagnosis", category: "Refrigerator", description: "Not cooling properly? Multimeter-based compressor, relay and thermostat diagnosis with a clear fix-or-replace recommendation — no guesswork.", image: `${IMG}/refrigerator.jpg`, basePrice: 60, estimatedDuration: "1-2 visits", serviceMode: "Home Visit", serviceArea: "Uttara, Dhaka", tech: 1, ageDays: 5 },
-  { title: "Fridge Gas Leakage Repair", category: "Refrigerator", description: "Find and repair refrigerant leaks, replace damaged coils and recharge gas. Includes capillary tube inspection.", image: `${IMG}/refrigerator.jpg`, basePrice: 50, estimatedDuration: "3-5 hours", serviceMode: "Home Visit", serviceArea: "Mirpur, Dhaka", tech: 1, ageDays: 4 },
-  { title: "LED TV Backlight Repair", category: "TV", description: "Screen dark or half-visible? We replace failed backlight strips on LED/4K TVs and recalibrate brightness uniformity.", image: `${IMG}/tv.jpg`, basePrice: 70, estimatedDuration: "4-6 hours", serviceMode: "Shop Drop-off", serviceArea: "Dhanmondi, Dhaka", tech: 0, ageDays: 4 },
-  { title: "Smart TV Software & HDMI Fix", category: "TV", description: "Firmware crashes, apps freezing, HDMI ports not detected? Firmware reflash, port reflow and smart-feature setup included.", image: `${IMG}/tv.jpg`, basePrice: 30, estimatedDuration: "1-2 hours", serviceMode: "Home Visit", serviceArea: "Uttara, Dhaka", tech: 1, ageDays: 3 },
-  { title: "Washing Machine Drum & Belt Repair", category: "Washing Machine", description: "Noise, shake or no spin? Drum bearing check, belt replacement and full mechanical overhaul for top and front-load machines.", image: `${IMG}/washing.jpg`, basePrice: 45, estimatedDuration: "3-4 hours", serviceMode: "Home Visit", serviceArea: "Mirpur, Dhaka", tech: 1, ageDays: 3 },
-  { title: "Home Electrical Wiring Safety Check", category: "Electrical", description: "Complete socket, breaker and earthing inspection with load testing. We flag fire hazards and fix loose connections on the spot.", image: `${IMG}/electrical.jpg`, basePrice: 50, estimatedDuration: "2-3 hours", serviceMode: "Home Visit", serviceArea: "Dhanmondi, Dhaka", tech: 0, ageDays: 2 },
-  // Pending examples (moderation queue)
-  { title: "Ceiling Fan Installation & Repair", category: "Electrical", description: "New fan installation, speed regulator wiring, bearing noise repair and wobbling balance fixes for all fan brands.", image: `${IMG}/electrical.jpg`, basePrice: 25, estimatedDuration: "1 hour", serviceMode: "Home Visit", serviceArea: "Mirpur, Dhaka", tech: 0, ageDays: 1, approvalStatus: "pending" },
+  // ── Smartphone ───────────────────────────────────────────────────────────
+  { title: "iPhone Screen Replacement (OLED)", category: "Smartphone", description: "Genuine-quality OLED panel replacement for iPhone 12–15. Includes frame inspection, adhesive reseal and 30-day workmanship warranty. Dead pixels and touch issues fixed on the spot.", image: `${IMG}/smartphone.jpg`, basePrice: 79, estimatedDuration: "2-3 hours", serviceMode: "Shop Drop-off", serviceArea: "Dhanmondi, Dhaka", tech: 0, ageDays: 12 },
+  { title: "Samsung Display & Touch Repair", category: "Smartphone", description: "Cracked glass or unresponsive touch? We replace Samsung displays with calibrated parts and test every sensor, camera and proximity switch before handover.", image: `${IMG}/smartphone.jpg`, basePrice: 65, estimatedDuration: "2-4 hours", serviceMode: "Home Visit", serviceArea: "Uttara, Dhaka", tech: 1, ageDays: 11 },
+  { title: "Phone Battery Replacement (All Brands)", category: "Smartphone", description: "Battery draining before lunch? New high-capacity cell with health calibration for Samsung, Xiaomi, Realme, Oppo and iPhone. Old cell safely recycled.", image: `${IMG}/smartphone.jpg`, basePrice: 29, estimatedDuration: "45-60 min", serviceMode: "Home Visit", serviceArea: "Mirpur, Dhaka", tech: 1, ageDays: 9 },
+  { title: "Charging Port & Micro-Solder Repair", category: "Smartphone", description: "Loose charging, slow sync or a dead port? Board-level micro-soldering fixes damaged flexes, connectors and ICs — data-safe, no motherboard swap needed.", image: `${IMG}/smartphone.jpg`, basePrice: 45, estimatedDuration: "2-3 hours", serviceMode: "Shop Drop-off", serviceArea: "Dhanmondi, Dhaka", tech: 0, ageDays: 7 },
+
+  // ── Laptop & PC ──────────────────────────────────────────────────────────
+  { title: "Laptop Full Service & Thermal Paste", category: "Laptop & PC", description: "Complete laptop servicing: internal dust cleaning, thermal paste renewal, fan check, hinge inspection and performance tuning. Fixes overheating and slowdowns.", image: `${IMG}/laptop.jpg`, basePrice: 45, estimatedDuration: "3-4 hours", serviceMode: "Shop Drop-off", serviceArea: "Dhanmondi, Dhaka", tech: 0, ageDays: 10 },
+  { title: "SSD Upgrade & OS Migration", category: "Laptop & PC", description: "Switch to blazing-fast SSD storage. We clone your OS and data, migrate everything safely and optimize boot times — usually under 3 hours.", image: `${IMG}/laptop.jpg`, basePrice: 55, estimatedDuration: "2-3 hours", serviceMode: "Shop Drop-off", serviceArea: "Mirpur, Dhaka", tech: 1, ageDays: 8 },
   { title: "Laptop Screen Replacement (All Brands)", category: "Laptop & PC", description: "Broken laptop display replaced with compatible HD/FHD panels for HP, Dell, Lenovo and Asus. Includes inverter and cable testing.", image: `${IMG}/laptop.jpg`, basePrice: 85, estimatedDuration: "3-4 hours", serviceMode: "Shop Drop-off", serviceArea: "Uttara, Dhaka", tech: 1, ageDays: 1, approvalStatus: "pending" },
+  { title: "Virus Removal & OS Cleanup", category: "Laptop & PC", description: "Pop-ups, slowdowns or strange startup programs? Full malware sweep, browser cleanup, driver refresh and Windows/macOS tune-up with a fresh backup.", image: `${IMG}/laptop.jpg`, basePrice: 30, estimatedDuration: "2-3 hours", serviceMode: "Home Visit", serviceArea: "Gulshan, Dhaka", tech: 0, ageDays: 6 },
+
+  // ── AC ───────────────────────────────────────────────────────────────────
+  { title: "Split AC Deep Servicing", category: "AC", description: "Full indoor + outdoor deep clean with eco-friendly chemicals, coil fin straightening, drainage check and cooling performance test. Beat the Dhaka heat.", image: `${IMG}/ac.jpg`, basePrice: 40, estimatedDuration: "2-3 hours", serviceMode: "Home Visit", serviceArea: "Uttara, Dhaka", tech: 1, ageDays: 10 },
+  { title: "AC Gas Refill & Cooling Check", category: "AC", description: "Leaking or weak cooling? Pressure test, leak sealing and R-410A/R-32 gas refill with a 7-day cooling guarantee.", image: `${IMG}/ac.jpg`, basePrice: 35, estimatedDuration: "1-2 hours", serviceMode: "Home Visit", serviceArea: "Dhanmondi, Dhaka", tech: 0, ageDays: 9 },
+  { title: "AC Installation & Uninstallation", category: "AC", description: "New split or window AC fitted safely with copper piping, vacuuming and gas-pressure test. Old unit removal and re-installation also included.", image: `${IMG}/ac.jpg`, basePrice: 55, estimatedDuration: "2-3 hours", serviceMode: "Home Visit", serviceArea: "Banani, Dhaka", tech: 1, ageDays: 5 },
+  { title: "AC Not Turning On — Complete Diagnosis", category: "AC", description: "Dead unit? We trace PCB, capacitor, compressor and remote-receiver faults with a written diagnosis before any part is replaced — no surprise costs.", image: `${IMG}/ac.jpg`, basePrice: 30, estimatedDuration: "1-2 hours", serviceMode: "Home Visit", serviceArea: "Mohammadpur, Dhaka", tech: 0, ageDays: 4 },
+
+  // ── Refrigerator ─────────────────────────────────────────────────────────
+  { title: "Refrigerator Compressor Diagnosis", category: "Refrigerator", description: "Not cooling properly? Multimeter-based compressor, relay and thermostat diagnosis with a clear fix-or-replace recommendation — no guesswork.", image: `${IMG}/refrigerator.jpg`, basePrice: 60, estimatedDuration: "1-2 visits", serviceMode: "Home Visit", serviceArea: "Uttara, Dhaka", tech: 1, ageDays: 9 },
+  { title: "Fridge Gas Leakage Repair", category: "Refrigerator", description: "Find and repair refrigerant leaks, replace damaged coils and recharge gas. Includes capillary tube inspection and 7-day cooling follow-up.", image: `${IMG}/refrigerator.jpg`, basePrice: 50, estimatedDuration: "3-5 hours", serviceMode: "Home Visit", serviceArea: "Mirpur, Dhaka", tech: 1, ageDays: 7 },
+  { title: "Deep Freezer & Thermostat Repair", category: "Refrigerator", description: "Fridge freezing everything or not cooling at all? Thermostat recalibration, defrost timer replacement and airflow balancing for all major brands.", image: `${IMG}/refrigerator.jpg`, basePrice: 45, estimatedDuration: "2-3 hours", serviceMode: "Home Visit", serviceArea: "Old Dhaka, Dhaka", tech: 0, ageDays: 3 },
+
+  // ── TV ───────────────────────────────────────────────────────────────────
+  { title: "LED TV Backlight Repair", category: "TV", description: "Screen dark or half-visible? We replace failed backlight strips on LED/4K TVs and recalibrate brightness uniformity.", image: `${IMG}/tv.jpg`, basePrice: 70, estimatedDuration: "4-6 hours", serviceMode: "Shop Drop-off", serviceArea: "Dhanmondi, Dhaka", tech: 0, ageDays: 8 },
+  { title: "Smart TV Software & HDMI Fix", category: "TV", description: "Firmware crashes, apps freezing, HDMI ports not detected? Firmware reflash, port reflow and smart-feature setup included.", image: `${IMG}/tv.jpg`, basePrice: 30, estimatedDuration: "1-2 hours", serviceMode: "Home Visit", serviceArea: "Uttara, Dhaka", tech: 1, ageDays: 6 },
+  { title: "TV Power Board & No-Display Repair", category: "TV", description: "TV won't turn on or shows no picture but has sound? Board-level repair of power supply, T-Con and mainboard with original-grade components.", image: `${IMG}/tv.jpg`, basePrice: 58, estimatedDuration: "3-5 hours", serviceMode: "Shop Drop-off", serviceArea: "Badda, Dhaka", tech: 1, ageDays: 2 },
+
+  // ── Washing Machine ──────────────────────────────────────────────────────
+  { title: "Washing Machine Drum & Belt Repair", category: "Washing Machine", description: "Noise, shake or no spin? Drum bearing check, belt replacement and full mechanical overhaul for top and front-load machines.", image: `${IMG}/washing.jpg`, basePrice: 45, estimatedDuration: "3-4 hours", serviceMode: "Home Visit", serviceArea: "Mirpur, Dhaka", tech: 1, ageDays: 7 },
+  { title: "Washer Spin Motor Repair", category: "Washing Machine", description: "Drum won't spin or stops mid-cycle? Motor carbon-brush replacement, capacitor check and control-board testing for both auto and semi-auto machines.", image: `${IMG}/washing.jpg`, basePrice: 65, estimatedDuration: "3-5 hours", serviceMode: "Home Visit", serviceArea: "Dhanmondi, Dhaka", tech: 0, ageDays: 5 },
+  { title: "Washing Machine Installation & Piping", category: "Washing Machine", description: "New machine delivered? Stand leveling, inlet/outlet piping, first-run leak test and spin-cycle setup by a trained technician.", image: `${IMG}/washing.jpg`, basePrice: 35, estimatedDuration: "1-1.5 hours", serviceMode: "Home Visit", serviceArea: "Savar, Dhaka", tech: 1, ageDays: 1 },
+
+  // ── Electrical ───────────────────────────────────────────────────────────
+  { title: "Home Electrical Wiring Safety Check", category: "Electrical", description: "Complete socket, breaker and earthing inspection with load testing. We flag fire hazards and fix loose connections on the spot.", image: `${IMG}/electrical.jpg`, basePrice: 50, estimatedDuration: "2-3 hours", serviceMode: "Home Visit", serviceArea: "Dhanmondi, Dhaka", tech: 0, ageDays: 6 },
+  { title: "Ceiling Fan Installation & Repair", category: "Electrical", description: "New fan installation, speed regulator wiring, bearing noise repair and wobbling balance fixes for all fan brands.", image: `${IMG}/electrical.jpg`, basePrice: 25, estimatedDuration: "1 hour", serviceMode: "Home Visit", serviceArea: "Mirpur, Dhaka", tech: 0, ageDays: 4 },
+  // ── Pending moderation queue ─────────────────────────────────────────────
+  { title: "Inverter & Home UPS Repair", category: "Electrical", description: "Inverter beeping or not taking charge? Battery health test, MOSFET/relay repair and full load test for home UPS and inverter systems.", image: `${IMG}/electrical.jpg`, basePrice: 75, estimatedDuration: "3-5 hours", serviceMode: "Shop Drop-off", serviceArea: "Gulshan, Dhaka", tech: 1, ageDays: 1, approvalStatus: "pending" },
+  { title: "Electric Stove & Oven Repair", category: "Electrical", description: "Burner dead or oven not heating evenly? Element, thermostat and wiring repair for kitchen stoves, ovens and hobs of every brand.", image: `${IMG}/electrical.jpg`, basePrice: 40, estimatedDuration: "2-3 hours", serviceMode: "Home Visit", serviceArea: "Mohammadpur, Dhaka", tech: 0, ageDays: 1, approvalStatus: "pending" },
 ];
 
 interface SeedBooking {
   serviceIndex: number;
-  customer: number;
-  status: string;
+  customer: number; // index into CUSTOMERS
+  status: "requested" | "accepted" | "rejected" | "in-progress" | "completed" | "cancelled";
   paymentStatus: "unpaid" | "paid";
   finalAmount?: number;
   ageDays: number;
   problem: string;
+  rating?: number;
+  review?: string;
 }
 
+// Business-rule safe: a customer never has 2 ACTIVE bookings for the same service.
 const BOOKINGS: SeedBooking[] = [
+  // ── requested (cancellable by customer, accept/reject by technician) ─────
   { serviceIndex: 0, customer: 0, status: "requested", paymentStatus: "unpaid", ageDays: 0, problem: "iPhone 14 fell on the floor — display cracked on the top-left corner and touch is dead near that area. Need original-quality screen." },
-  { serviceIndex: 4, customer: 1, status: "requested", paymentStatus: "unpaid", ageDays: 1, problem: "Split AC is not cooling since last week and the outdoor unit makes a strange rattling noise in the evening." },
-  { serviceIndex: 6, customer: 0, status: "accepted", paymentStatus: "unpaid", ageDays: 2, problem: "Refrigerator stopped cooling properly — freezer works a bit but the lower compartment stays warm. Compressor seems to run constantly." },
-  { serviceIndex: 2, customer: 1, status: "in-progress", paymentStatus: "unpaid", ageDays: 3, problem: "Laptop shuts down after 20 minutes of use. Fans are loud and the keyboard area gets very hot during charging." },
-  { serviceIndex: 8, customer: 0, status: "completed", paymentStatus: "unpaid", finalAmount: 75, ageDays: 5, problem: "55-inch LED TV display is very dim — you can barely see the picture in daylight. Sounds and channels work fine." },
-  { serviceIndex: 10, customer: 1, status: "completed", paymentStatus: "paid", finalAmount: 52, ageDays: 9, problem: "Washing machine stopped spinning and makes a grinding noise during the spin cycle. Water drains normally." },
+  { serviceIndex: 8, customer: 1, status: "requested", paymentStatus: "unpaid", ageDays: 1, problem: "Split AC is not cooling since last week and the outdoor unit makes a strange rattling noise in the evening." },
+  { serviceIndex: 2, customer: 0, status: "requested", paymentStatus: "unpaid", ageDays: 1, problem: "Battery drops from 80% to 20% in two hours even after a full factory reset. Phone also heats while charging." },
+  // ── accepted ─────────────────────────────────────────────────────────────
+  { serviceIndex: 12, customer: 0, status: "accepted", paymentStatus: "unpaid", ageDays: 2, problem: "Refrigerator stopped cooling properly — freezer works a bit but the lower compartment stays warm. Compressor seems to run constantly." },
+  { serviceIndex: 10, customer: 1, status: "accepted", paymentStatus: "unpaid", ageDays: 2, problem: "New 1.5-ton split AC purchased — needs installation in the bedroom with 8 ft copper piping and outdoor unit mounting." },
+  // ── in-progress ──────────────────────────────────────────────────────────
+  { serviceIndex: 4, customer: 1, status: "in-progress", paymentStatus: "unpaid", ageDays: 3, problem: "Laptop shuts down after 20 minutes of use. Fans are loud and the keyboard area gets very hot during charging." },
+  { serviceIndex: 18, customer: 0, status: "in-progress", paymentStatus: "unpaid", ageDays: 3, problem: "Washing machine stopped spinning and makes a grinding noise during the spin cycle. Water drains normally." },
+  // ── completed + unpaid → live "Pay Now" demos ────────────────────────────
+  { serviceIndex: 15, customer: 0, status: "completed", paymentStatus: "unpaid", finalAmount: 75, ageDays: 5, problem: "55-inch LED TV display is very dim — you can barely see the picture in daylight. Sounds and channels work fine." },
+  { serviceIndex: 16, customer: 1, status: "completed", paymentStatus: "unpaid", finalAmount: 35, ageDays: 4, problem: "Smart TV apps freeze after a few minutes and Netflix keeps crashing. HDMI-2 is also not detecting the set-top box." },
+  // ── completed + paid (payments + ratings & reviews) ──────────────────────
+  { serviceIndex: 19, customer: 1, status: "completed", paymentStatus: "paid", finalAmount: 70, ageDays: 9, problem: "Washer stopped spinning and made a grinding noise during the spin cycle.", rating: 5, review: "Motor fixed in one visit and the price matched the quote exactly. Very professional." },
+  { serviceIndex: 5, customer: 0, status: "completed", paymentStatus: "paid", finalAmount: 60, ageDays: 8, problem: "Old HDD laptop takes 6+ minutes to boot — want a full SSD migration with Windows clone.", rating: 5, review: "Boot time went from 6 minutes to 12 seconds. They even cloned all my files perfectly." },
+  { serviceIndex: 9, customer: 1, status: "completed", paymentStatus: "paid", finalAmount: 40, ageDays: 11, problem: "AC gas refill needed — room never gets cold enough even on 16°C.", rating: 4, review: "Cooling is much better now. Took a little longer than promised but handled it politely." },
+  { serviceIndex: 21, customer: 0, status: "completed", paymentStatus: "paid", finalAmount: 55, ageDays: 12, problem: "Old flat wiring check needed before renovating — worried about earthing and overloaded sockets.", rating: 5, review: "Found two dangerous loose connections no one noticed before. Worth every taka." },
+  { serviceIndex: 3, customer: 1, status: "completed", paymentStatus: "paid", finalAmount: 40, ageDays: 10, problem: "Charging port loose — cable falls out and charging only works at an angle.", rating: 5, review: "Port rebuilt like new, plus they cleaned the speaker mesh for free. Highly recommend." },
+  { serviceIndex: 7, customer: 0, status: "completed", paymentStatus: "paid", finalAmount: 30, ageDays: 13, problem: "Laptop infected with adware — constant pop-ups and browser redirects.", rating: 4, review: "All threats removed and the laptop feels quick again. Straightforward and honest service." },
+  // ── cancelled / rejected ─────────────────────────────────────────────────
   { serviceIndex: 1, customer: 0, status: "cancelled", paymentStatus: "unpaid", ageDays: 10, problem: "Samsung phone glass cracked slightly — decided to replace the phone instead, cancelling the request." },
-  { serviceIndex: 5, customer: 1, status: "rejected", paymentStatus: "unpaid", ageDays: 11, problem: "AC gas refill needed urgently but the model is too old and parts are unavailable — technician rejected the job." },
+  { serviceIndex: 22, customer: 1, status: "cancelled", paymentStatus: "unpaid", ageDays: 13, problem: "Ceiling fan installation — plans changed, shifting to a new flat with pre-installed fans." },
+  { serviceIndex: 13, customer: 1, status: "rejected", paymentStatus: "unpaid", ageDays: 11, problem: "Fridge gas refill urgently — model too old, spare coils unavailable, technician rejected the job." },
 ];
 
 // ---------------------------------------------------------------------------
-// 4) Main
+// 3) Main
 // ---------------------------------------------------------------------------
 async function main() {
   console.log("🌱 FixMate seed starting…");
@@ -160,11 +202,19 @@ async function main() {
     // note: the users collection email index is created by BetterAuth itself
   ]);
 
-  // ---- users ----
+  // ---- users (kept across runs) ----
   console.log("👤 Creating users via BetterAuth…");
-  await signUp(auth, "FixMate Admin", "admin@fixmate.test", "customer");
-  for (const t of TECHS) await signUp(auth, t.name, t.email, "technician");
-  for (const c of CUSTOMERS) await signUp(auth, c.name, c.email, "customer");
+  const wanted = [
+    ["FixMate Admin", "admin@fixmate.test", "customer"],
+    ...TECHS.map((t) => [t.name, t.email, "technician"]),
+    ...CUSTOMERS.map((c) => [c.name, c.email, "customer"]),
+  ] as const;
+  const present = new Set(
+    (await users.find({ email: { $in: wanted.map(([, e]) => e) } }).toArray()).map((u) => u.email)
+  );
+  for (const [name, email, role] of wanted) {
+    if (!present.has(email)) await signUp(auth, name, email, role);
+  }
 
   // Admin role is never self-registered — promote manually (assignment-approved: seed)
   await users.updateOne(
@@ -175,13 +225,14 @@ async function main() {
     await users.updateOne({ email: t.email }, { $set: { area: t.area, bio: t.bio, image: null } });
   }
 
-  // ---- services ----
+  // ---- services (rebuild only when the target set changed) ----
   const existingCount = await services.countDocuments();
   let serviceDocs: any[] = [];
-  if (existingCount >= 12) {
-    serviceDocs = await services.find({}).toArray();
-    console.log(`🛠️  Services already exist (${existingCount}) — reusing`);
+  if (existingCount === SERVICES.length) {
+    serviceDocs = await services.find({}).sort({ createdAt: 1 }).toArray();
+    console.log(`🛠️  Services already match target (${existingCount}) — keeping yours`);
   } else {
+    if (existingCount) await services.deleteMany({});
     console.log("🛠️  Inserting services…");
     const docs = SERVICES.map((s) => ({
       title: s.title,
@@ -201,15 +252,23 @@ async function main() {
       createdAt: new Date(now - s.ageDays * DAYS),
     }));
     const result = await services.insertMany(docs as any);
-    serviceDocs = await services.find({}).toArray();
-    console.log(`   inserted ${result.insertedCount} services`);
+    serviceDocs = await services.find({}).sort({ createdAt: 1 }).toArray();
+    const approved = await services.countDocuments({ approvalStatus: "approved" });
+    console.log(`   inserted ${result.insertedCount} services (${approved} approved, ${result.insertedCount - approved} pending)`);
   }
+  // Reorder serviceDocs to follow SERVICES order (bookings reference by index)
+  const byTitle = new Map(serviceDocs.map((s) => [s.title, s]));
+  serviceDocs = SERVICES.map((s) => byTitle.get(s.title)).filter(Boolean);
 
-  // ---- bookings ----
+  // ---- bookings (rebuild with services so indexes stay consistent) ----
   const existingBookings = await bookings.countDocuments();
-  if (existingBookings >= 5) {
-    console.log(`📅 Bookings already exist (${existingBookings}) — skipping`);
+  if (existingBookings === BOOKINGS.length) {
+    console.log(`📅 Bookings already match target (${existingBookings}) — keeping yours`);
   } else {
+    if (existingBookings) {
+      await bookings.deleteMany({});
+      await payments.deleteMany({});
+    }
     console.log("📅 Inserting bookings across every status…");
     for (const b of BOOKINGS) {
       const svc = serviceDocs[b.serviceIndex] || serviceDocs[0];
@@ -217,10 +276,7 @@ async function main() {
       const created = new Date(now - b.ageDays * DAYS);
       const history: { status: string; changedAt: Date }[] = [{ status: "requested", changedAt: created }];
       const order = ["requested", "accepted", "in-progress", "completed"];
-      const stopAt =
-        b.status === "cancelled" || b.status === "rejected"
-          ? "requested"
-          : b.status;
+      const stopAt = b.status === "cancelled" || b.status === "rejected" ? "requested" : b.status;
       const idx = order.indexOf(stopAt);
       if (idx > 0) {
         for (let i = 1; i <= idx; i++) {
@@ -235,7 +291,7 @@ async function main() {
       }
 
       const cust = CUSTOMERS[b.customer];
-      const doc = {
+      const doc: Record<string, unknown> = {
         serviceId: String(svc._id),
         serviceTitle: svc.title,
         serviceImage: svc.image,
@@ -246,7 +302,7 @@ async function main() {
         technicianEmail: svc.technicianEmail,
         customerName: cust.name,
         customerEmail: cust.email,
-        customerPhone: "01712345678",
+        customerPhone: b.customer === 0 ? "01712-345678" : "01819-876543",
         address: b.customer === 0 ? "House 42, Road 9, Dhanmondi, Dhaka" : "House 7, Sector 4, Uttara, Dhaka",
         preferredDate: new Date(created.getTime() + 2 * DAYS),
         problemDescription: b.problem,
@@ -255,6 +311,8 @@ async function main() {
         statusHistory: history,
         createdAt: created,
       };
+      if (b.rating) doc.rating = b.rating;
+      if (b.review) doc.review = b.review;
       const res = await bookings.insertOne(doc as any);
 
       // matching payment record for the paid job
@@ -275,14 +333,10 @@ async function main() {
         });
       }
     }
-    console.log(`   inserted ${BOOKINGS.length} bookings`);
+    console.log(`   inserted ${BOOKINGS.length} bookings (${BOOKINGS.filter((b) => b.paymentStatus === "paid").length} with payments)`);
   }
 
-  // ---- ratings on a couple of paid/completed bookings ----
-  await bookings.updateMany(
-    { status: "completed", paymentStatus: "paid", rating: { $exists: false } },
-    { $set: { rating: 5, review: "Excellent work — on time, tidy and fairly priced." } }
-  );
+  // ---- ratings → average on services (stars on cards & details) ----
   const rated = await bookings
     .aggregate([
       { $match: { rating: { $ne: null } } },
@@ -293,11 +347,16 @@ async function main() {
     await services.updateOne({ _id: r._id }, { $set: { ratingAvg: Math.round(r.avg * 10) / 10, ratingCount: r.count } });
   }
 
+  const sCount = await services.countDocuments();
+  const bCount = await bookings.countDocuments();
+  const pCount = await payments.countDocuments();
   console.log("");
-  console.log("✅ Seed complete! Test accounts (all password: Fixmate123):");
-  console.log("   🔑 Admin     admin@fixmate.test");
-  console.log("   🔑 Technician technician@fixmate.test  /  technician2@fixmate.test");
-  console.log("   🔑 Customer  customer@fixmate.test  /  customer2@fixmate.test");
+  console.log("✅ Seed complete!");
+  console.log(`   services=${sCount}  bookings=${bCount}  payments=${pCount}  rated-services=${rated.length}`);
+  console.log("   Test accounts (all password: Fixmate123):");
+  console.log("   🔑 Admin      admin@fixmate.test");
+  console.log("   🔑 Technicians technician@fixmate.test  /  technician2@fixmate.test");
+  console.log("   🔑 Customers  customer@fixmate.test  /  customer2@fixmate.test");
 }
 
 main()
