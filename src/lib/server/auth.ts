@@ -17,6 +17,27 @@ export const auth = betterAuth({
     // Assignment rules: at least 6 characters (complexity is enforced on the sign-up form).
     minPasswordLength: 6,
   },
+  // Social login (Google + GitHub) — a provider activates only when its OAuth
+  // credentials exist in .env.local (see SETUP-AND-DEPLOY.md). Social users
+  // default to the 'customer' role via the create hook below.
+  socialProviders: {
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          },
+        }
+      : {}),
+    ...(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
+      ? {
+          github: {
+            clientId: process.env.GITHUB_CLIENT_ID,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET,
+          },
+        }
+      : {}),
+  },
   user: {
     additionalFields: {
       role: {

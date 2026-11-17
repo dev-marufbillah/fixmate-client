@@ -6,6 +6,7 @@ import { Suspense, useState } from "react";
 import { toast } from "sonner";
 import { Check, X, Eye, EyeOff, User, Wrench } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { SocialButtons } from "./SocialButtons";
 import { DASHBOARD_HOME } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Role } from "@/lib/types";
@@ -165,6 +166,12 @@ function SignUpForm() {
         {busy ? <span className="loading loading-spinner loading-sm" /> : null}
         Create account
       </button>
+
+      <SocialButtons
+        callbackURL={
+          redirect && redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "/dashboard"
+        }
+      />
 
       <p className="text-sm text-center opacity-75">
         Already have an account?{" "}

@@ -6,6 +6,7 @@ import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { SocialButtons } from "./SocialButtons";
 import { DASHBOARD_HOME } from "@/lib/constants";
 import { clearToken } from "@/lib/api";
 import { useSessionUser } from "@/hooks/use-session-user";
@@ -108,6 +109,8 @@ function SignInForm() {
         {busy ? <span className="loading loading-spinner loading-sm" /> : null}
         Sign In
       </button>
+
+      <SocialButtons callbackURL={safeRedirect || "/dashboard"} />
 
       <p className="text-sm text-center opacity-75">
         New to FixMate?{" "}
